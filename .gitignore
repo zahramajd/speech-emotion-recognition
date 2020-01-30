@@ -1,0 +1,13 @@
+env
+*.csv
+train
+validation
+download.zip
+sample
+spectrograms
+prep-spectrograms
+*.zip
+*.pdf
+*.json
+*.hdf5
+.DS_Store
