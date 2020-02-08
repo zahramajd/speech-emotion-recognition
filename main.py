@@ -1,8 +1,10 @@
 #TODO
-# confusion matrix, alexnet, plot
+# alexnet
 import sklearn.metrics as metrics
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -85,6 +87,26 @@ history = model.fit_generator(train_data_gen, epochs=epochs, verbose=1,
 y_pred = model.predict(test_data_gen) 
 y_pred_labels = np.argmax(y_pred, axis=1)
 
-confusion_matrix = metrics.confusion_matrix(y_true=test_data_gen.classes, y_pred=y_pred_labels, normalize=True)
+confusion_matrix = metrics.confusion_matrix(y_true=test_data_gen.classes, y_pred=y_pred_labels)
 
 print(confusion_matrix)
+
+plt.style.use("ggplot")
+fig = plt.figure(figsize=(20,8))
+
+fig.add_subplot(1,2,1)
+plt.title("Training Loss")
+plt.plot(np.arange(0, N), result.history["loss"], label="train_loss")
+plt.plot(np.arange(0, N), result.history["val_loss"], label="val_loss")
+plt.ylim(0, 1)
+
+fig.add_subplot(1,2,2)
+plt.title("Training Accuracy")
+plt.plot(np.arange(0, N), result.history["acc"], label="train_accuracy")
+plt.plot(np.arange(0, N), result.history["val_acc"], label="val_accuracy")
+plt.ylim(0, 1)
+
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend(loc="lower left")
+plt.show()
