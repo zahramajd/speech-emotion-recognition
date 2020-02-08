@@ -2,7 +2,9 @@
 win_size = 0.01;
 fft_overlap = 0.5;
 
-myDir = 'download/wav/'; 
+
+myDir = 'ravdess-emotional-speech-audio/Actor_24';
+
 myFiles = dir(fullfile(myDir,'*.wav'));
 for k = 1:length(myFiles)
   baseFileName = myFiles(k).name;
@@ -19,7 +21,7 @@ for k = 1:length(myFiles)
   colormap jet;
   axis off;
   colorbar('off');
-  path = join(['spectrograms/',baseFileName,'.png']);
+  path = join(['spectrograms-ravdess/',baseFileName,'.png']);
   path = erase(path, '.wav');
   saveas(gcf,path);
 end

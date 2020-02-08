@@ -1,5 +1,7 @@
 #TODO
-# confusion matrix
+# confusion matrix, alexnet, plot
+import sklearn.metrics as metrics
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import Model
@@ -12,29 +14,37 @@ from tensorflow.keras.utils import plot_model
 
 
 batch_size = 30
-epochs = 30
+epochs = 3
 IMG_HEIGHT = 256
 IMG_WIDTH = 256
-train_dir = "prep-spectrograms"
+train_dir = "prep-spectrograms-ravdess"
 
-CLASS_NAMES = ['T', 'N', 'E', 'L', 'F', 'W', 'A']
+# CLASS_NAMES = ['T', 'N', 'E', 'L', 'F', 'W', 'A']
+CLASS_NAMES = ['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08']
 
-train_image_generator = ImageDataGenerator()
-val_image_generator = ImageDataGenerator()
 
-data = pd.read_csv('all_data.csv', names=['path', 'cls'])
+# train_image_generator = ImageDataGenerator()
+# val_image_generator = ImageDataGenerator()
 
-train_data_gen = train_image_generator.flow_from_dataframe(
-                dataframe=data[:int(data.shape[0]*.9)],
+data = pd.read_csv('all_data_ravdess.csv', names=['path', 'cls'])
+
+train_data_gen = ImageDataGenerator().flow_from_dataframe(
+                dataframe=data[:int(data.shape[0]*.7)],
                 y_col='cls', x_col='path',batch_size=batch_size,directory=train_dir,
                 shuffle=True, target_size=(IMG_HEIGHT, IMG_WIDTH),
                 classes=CLASS_NAMES)
 
-valid_data_gen = val_image_generator.flow_from_dataframe(
-                dataframe=data[int(data.shape[0]*.9):],
+valid_data_gen = ImageDataGenerator().flow_from_dataframe(
+                dataframe=data[int(data.shape[0]*.7):int(data.shape[0]*.9)],
                 y_col='cls', x_col='path', batch_size=batch_size,directory=train_dir,
                 shuffle=True, target_size=(IMG_HEIGHT, IMG_WIDTH),
                 classes=CLASS_NAMES)
+
+test_data_gen = ImageDataGenerator().flow_from_dataframe(
+                dataframe=data[int(data.shape[0]*.9):],
+                y_col='cls', x_col='path', batch_size=batch_size,directory=train_dir,
+                shuffle=True, target_size=(IMG_HEIGHT, IMG_WIDTH),
+                classes=CLASS_NAMES)                
 
 
 model = Sequential()
@@ -53,9 +63,9 @@ model.add(Dense(2048, activation='relu', name='fc1'))
 model.add(Dropout(0.5))
 model.add(Dense(2048, activation='relu', name='fc2'))
 model.add(Dropout(0.5))
-model.add(Dense(7, activation='softmax', name='fc3'))
+model.add(Dense(8, activation='softmax', name='fc3'))
 
-checkpoint = ModelCheckpoint('weights_cnn.hdf5', monitor='val_accuracy', 
+checkpoint = ModelCheckpoint('weights_cnn_ravdess.hdf5', monitor='val_accuracy', 
                 verbose=1, save_best_only=True,mode='auto')
 
 tb_plot = TensorBoard(log_dir='.', histogram_freq=0, write_graph=True, write_images=True)
@@ -70,3 +80,11 @@ history = model.fit_generator(train_data_gen, epochs=epochs, verbose=1,
                         callbacks=[checkpoint, tb_plot], validation_data=valid_data_gen, 
                         steps_per_epoch=len(train_data_gen), validation_steps=len(valid_data_gen))
 
+
+# test
+y_pred = model.predict(test_data_gen) 
+y_pred_labels = np.argmax(y_pred, axis=1)
+
+confusion_matrix = metrics.confusion_matrix(y_true=test_data_gen.classes, y_pred=y_pred_labels, normalize=True)
+
+print(confusion_matrix)

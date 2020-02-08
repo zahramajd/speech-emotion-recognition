@@ -47,17 +47,16 @@ def crop(path):
 
 def crop_all():
 
-    for filename in os.listdir('spectrograms'):
+    for filename in os.listdir('spectrograms-ravdess'):
         if(not filename =='.DS_Store'):
-            cropped = crop('spectrograms/'+filename)
-            cropped.save('prep-spectrograms/'+filename)
+            cropped = crop('spectrograms-ravdess/'+filename)
+            cropped.save('prep-spectrograms-ravdess/'+filename)
 
     return
 
-
 all_data = np.empty((0,2))
-for filename in os.listdir('prep-spectrograms'):
+for filename in os.listdir('prep-spectrograms-ravdess'):
     if(not filename =='.DS_Store'):
-        all_data = np.append(all_data, [[filename, filename[5:6]]], axis = 0)
+        all_data = np.append(all_data, [[filename, 'c'+str(filename[6:8])]], axis = 0)
 
-pd.DataFrame(all_data).to_csv('all_data.csv', header=False, index=False)
+pd.DataFrame(all_data).to_csv('all_data_ravdess.csv', header=False, index=False)
