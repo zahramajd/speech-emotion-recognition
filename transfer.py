@@ -1,29 +1,21 @@
-import sklearn.metrics as metrics
-from sklearn.metrics import accuracy_score
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
-import tensorflow as tf
+from tensorflow.keras.applications.vgg16 import VGG16
 from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Flatten
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Activation, Conv2D, MaxPooling2D, Flatten, Dropout, Dense, Flatten, GlobalAveragePooling2D
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.utils import plot_model
-
+from tensorflow.keras.layers import Input
 
 batch_size = 30
-epochs = 60
+epochs = 10
 IMG_HEIGHT = 256
 IMG_WIDTH = 256
 train_dir = "prep-spectrograms-torento"
 
-# CLASS_NAMES = ['T', 'N', 'E', 'L', 'F', 'W', 'A']
-# CLASS_NAMES = ['c01', 'c02', 'c03', 'c04', 'c05', 'c06', 'c07', 'c08']
 CLASS_NAMES = ['neutral', 'fear', 'happy', 'disgust', 'angry', 'sad', 'ps']
-
 
 data = pd.read_csv('/content/drive/My Drive/all_data_torento.csv', names=['path', 'cls'])
 
@@ -43,31 +35,22 @@ test_data_gen = ImageDataGenerator().flow_from_dataframe(
                 dataframe=data[int(data.shape[0]*.9):],
                 y_col='cls', x_col='path', batch_size=batch_size,directory=train_dir,
                 shuffle=True, target_size=(IMG_HEIGHT, IMG_WIDTH),
-                classes=CLASS_NAMES)                
+                classes=CLASS_NAMES)  
 
 
-model = Sequential()
-model.add(Conv2D(120, kernel_size=(11, 11), strides=(4,4), padding='valid',
-            kernel_initializer='normal', activation='relu', input_shape=(IMG_HEIGHT, IMG_WIDTH ,3)))
-model.add(MaxPooling2D((3, 3), strides=(2, 2)))
+img_input = Input(shape=(IMG_HEIGHT, IMG_WIDTH, 3))
+vgg19_model = VGG16(input_tensor=img_input,weights="imagenet")
+o = vgg19_model.get_layer('block4_pool').output
+o = Flatten()(o)
+o = Dense(1024, activation='relu')(o)
+output = Dense(7, activation='softmax')(o)
+model = Model(inputs=img_input, outputs=output)
 
-model.add(Conv2D(256, kernel_size=(5, 5), strides=(1,1), padding='valid',
-                    kernel_initializer='normal', activation='relu'))
 
-model.add(Conv2D(120, kernel_size=(11, 11), strides=(4,4), padding='valid',
-                    kernel_initializer='normal', activation='relu'))
-
-model.add(GlobalAveragePooling2D())
-# model.add(Dense(2048, activation='relu', name='fc1'))
-# model.add(Dropout(0.5))
-# model.add(Dense(2048, activation='relu', name='fc2'))
-# model.add(Dropout(0.7))
-model.add(Dense(7, activation='softmax', name='fc3'))
-
-checkpoint = ModelCheckpoint('weights_cnn_torento_.hdf5', monitor='val_acc', 
+checkpoint = ModelCheckpoint('weights_cnn_torento_vgg.hdf5', monitor='val_acc', 
                 verbose=1, save_best_only=True,mode='auto')
 
-# tb_plot = TensorBoard(log_dir='.', histogram_freq=0, write_graph=True, write_images=True)
+es = EarlyStopping(mode='min', monitor='val_loss', min_delta=0.001, verbose=1)
 
 adam = Adam(lr=1e-5, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
@@ -76,14 +59,15 @@ model.summary()
 
 print("Traning Model...")
 history = model.fit_generator(train_data_gen, epochs=epochs, verbose=1,
-                        validation_data=valid_data_gen, callbacks=[checkpoint],
+                        validation_data=valid_data_gen, callbacks=[checkpoint, es],
                         steps_per_epoch=len(train_data_gen), validation_steps=len(valid_data_gen))
 
 
 # test
 y_pred = model.predict(test_data_gen) 
 y_pred_labels = np.argmax(y_pred, axis=1)
-print('acc on test:\t', accuracy_score(test_data_gen.classes, y_pred_labels))
+
+print('VGG16,acc on test:\t', accuracy_score(test_data_gen.classes, y_pred_labels))
 confusion_matrix = metrics.confusion_matrix(y_true=test_data_gen.classes, y_pred=y_pred_labels)
 
 print(confusion_matrix)
@@ -91,19 +75,14 @@ print(confusion_matrix)
 plt.style.use("ggplot")
 fig = plt.figure(figsize=(20,8))
 
-# fig.add_subplot(1,2,1)
-# plt.title("Training Loss")
-# plt.plot(history.history["loss"], label="train_loss")
-# plt.plot(history.history["val_loss"], label="val_loss")
-# plt.ylim(0, 1)
 
 fig.add_subplot(1,2,1)
-plt.title("Training Accuracy")
+plt.title("Training Accuracy on VGG16")
 plt.plot(history.history["acc"], label="train_accuracy")
 plt.plot(history.history["val_acc"], label="val_accuracy")
 plt.ylim(0, 1)
 
 plt.xlabel("Epoch #")
-plt.ylabel("Loss/Accuracy")
+plt.ylabel("Accuracy")
 plt.legend(loc="lower left")
 plt.show()

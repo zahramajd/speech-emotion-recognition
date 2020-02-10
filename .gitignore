@@ -8,6 +8,7 @@ spectrograms-berlin
 spectrograms-torento
 prep-spectrograms-berlin
 prep-spectrograms-ravdess
+prep-spectrograms-torento
 ravdess-emotional-speech-audio
 *.zip
 *.pdf
